@@ -1,7 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QVBoxLayout, QLabel, QWidget, QGridLayout,\
     QLineEdit, QPushButton, QMainWindow, QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QComboBox, QToolBar, \
-    QStatusBar
+    QStatusBar, QMessageBox
 from PyQt6.QtGui import QAction, QIcon
 import sys, sqlite3
 
@@ -54,7 +54,7 @@ class MainWindow(QMainWindow):
         edit_button = QPushButton("Edit Record")
         edit_button.clicked.connect(self.edit)
         delete_button = QPushButton("Delete Record")
-        delete_button.clicked.connect(self.edit)
+        delete_button.clicked.connect(self.delete)
 
         children = self.findChildren(QPushButton)
 
@@ -179,11 +179,108 @@ class SearchDialog(QDialog):
 
 
 class EditDialog(QDialog):
-   pass
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Update Student Data")
+        self.setFixedWidth(300)
+        self.setFixedHeight(300)
 
+        layout = QVBoxLayout()
+
+        # Get student name from the selected row
+        index = main_window.table.currentRow()
+        # Put 1 in bracket because 0 is to the id column and 1 is to the name column
+        student_name = main_window.table.item(index, 1).text()
+
+        # get ID from selected row
+        self.student_id = main_window.table.item(index, 0).text()
+        # Add student Name
+        self.student_name = QLineEdit(student_name)
+        self.student_name.setPlaceholderText("Name")
+        layout.addWidget(self.student_name)
+
+        # using the seelcted rows course name
+        course_name = main_window.table.item(index, 2).text()
+        # Add course number
+        self.course_name = QComboBox()
+        courses = ['Biology', 'Astronomy', 'Math', 'Physics']
+        self.course_name.addItems(courses)
+        self.course_name.setCurrentText(course_name)
+        layout.addWidget(self.course_name)
+
+        # selecting the phone number from the selected row for editing
+        phone_number = main_window.table.item(index, 3).text()
+        self.phone_number = QLineEdit(phone_number)
+        self.phone_number.setPlaceholderText("Phone Number")
+        layout.addWidget(self.phone_number)
+
+        self.add_button = QPushButton("Update")
+        self.add_button.clicked.connect(self.update_student)
+        layout.addWidget(self.add_button)
+        self.setLayout(layout)
+
+    def update_student(self):
+        connection = sqlite3.connect("database.db")
+        cursor = connection.cursor()
+        cursor.execute("UPDATE students SET name  = ?, course = ?, mobile = ? WHERE id = ?",
+                       (self.student_name.text(),
+                        self.course_name.itemText(self.course_name.currentIndex()),
+                        self.phone_number.text(),
+                        self.student_id))
+
+        connection.commit()
+        cursor.close()
+        connection.close()
+        # refresh the table
+        main_window.load_data()
 
 class DeleteDialog(QDialog):
-    pass
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("Delete Student Data")
+        self.setFixedSize(300, 150)
+
+        layout = QGridLayout()
+
+        confirmation = QLabel("Are you sure you want to delete the selected record?")
+        yes_button = QPushButton("YES")
+        no_button = QPushButton("NO")
+
+        layout.addWidget(confirmation, 0, 0, 1, 2)
+        layout.addWidget(yes_button, 1, 0)
+        layout.addWidget(no_button, 1, 1)
+
+        yes_button.clicked.connect(self.delete_student)
+        no_button.clicked.connect(self.close)
+
+        self.setLayout(layout)
+
+    def delete_student(self):
+        # Ensure a row is selected
+        index = main_window.table.currentRow()
+        # Get student id from the selected row
+        student_id = main_window.table.item(index, 0).text()
+
+        connection = sqlite3.connect("database.db")
+        cursor = connection.cursor()
+        cursor.execute("DELETE FROM students WHERE id = ?", (student_id,))
+        connection.commit()
+        cursor.close()
+        connection.close()
+
+        # Refresh the main window table data
+        main_window.load_data()
+
+        # Close the delete confirmation dialog
+        self.close()
+
+        # Show a confirmation message
+        confirmation_widget = QMessageBox()
+        confirmation_widget.setWindowTitle("Record Deleted")
+        confirmation_widget.setText("The selected record has been deleted.")
+        confirmation_widget.exec()
+
+
 
 app = QApplication(sys.argv)
 main_window = MainWindow()
