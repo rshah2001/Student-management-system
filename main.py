@@ -1,6 +1,7 @@
 from PyQt6.QtCore import Qt
 from PyQt6.QtWidgets import QApplication, QVBoxLayout, QLabel, QWidget, QGridLayout,\
-    QLineEdit, QPushButton, QMainWindow, QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QComboBox, QToolBar
+    QLineEdit, QPushButton, QMainWindow, QTableWidget, QTableWidgetItem, QDialog, QVBoxLayout, QComboBox, QToolBar, \
+    QStatusBar
 from PyQt6.QtGui import QAction, QIcon
 import sys, sqlite3
 
@@ -34,7 +35,7 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.table)
         self.load_data()
 
-        # create tool bar and tool bar elements
+        # create toolbar and toolbar elements
         toolbar = QToolBar()
         toolbar.setMovable(True)
         self.addToolBar(toolbar)
@@ -42,6 +43,27 @@ class MainWindow(QMainWindow):
         toolbar.addAction(add_student_action)
         toolbar.addAction(search_action)
 
+        # Creating a status bar and adding status bar elements
+        self.statusbar = QStatusBar()
+        self.setStatusBar(self.statusbar)
+
+        # Detect Click from the user on the database
+        self.table.cellClicked.connect(self.cell_clicked)
+
+    def cell_clicked(self):
+        edit_button = QPushButton("Edit Record")
+        edit_button.clicked.connect(self.edit)
+        delete_button = QPushButton("Delete Record")
+        delete_button.clicked.connect(self.edit)
+
+        children = self.findChildren(QPushButton)
+
+        if children:
+            for child in children:
+                self.statusbar.removeWidget(child)
+
+        self.statusbar.addWidget(edit_button)
+        self.statusbar.addWidget(delete_button)
 
     def load_data(self):
         connection = sqlite3.connect("database.db")
@@ -59,6 +81,14 @@ class MainWindow(QMainWindow):
 
     def search(self):
         dialog = SearchDialog(self)
+        dialog.exec()
+
+    def edit(self):
+        dialog = EditDialog()
+        dialog.exec()
+
+    def delete(self):
+        dialog = DeleteDialog()
         dialog.exec()
 
 
@@ -147,6 +177,13 @@ class SearchDialog(QDialog):
         cursor.close()
         connection.close()
 
+
+class EditDialog(QDialog):
+   pass
+
+
+class DeleteDialog(QDialog):
+    pass
 
 app = QApplication(sys.argv)
 main_window = MainWindow()
